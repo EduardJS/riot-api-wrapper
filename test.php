@@ -16,7 +16,4 @@
 	$api->setRegion( 'eune' );
 
 	$summoner = $api->getSummonerByName( $data['summoner'] )[ $data['summoner'] ];
-	
-	//$history 	= $api->getMatchHistory( $summoner['id'] );
-
-	echo json_encode( $summoner, JSON_PRETTY_PRINT );
+	$history  = $api->getMatchHistory( $summoner['id'] );
