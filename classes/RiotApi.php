@@ -2,42 +2,31 @@
 
 class RiotApi {
 
-
-	private $apiVersion = [
-				'1.1' => 'https://{region}.api.pvp.net/api/lol/{region}/v1.1/',
-				'1.2' => 'https://{region}.api.pvp.net/api/lol/{region}/v1.2/',
-				'1.3' => 'https://{region}.api.pvp.net/api/lol/{region}/v1.3/',
-				'1.4' => 'https://{region}.api.pvp.net/api/lol/{region}/v1.4/',
-				'2.1' => 'https://{region}.api.pvp.net/api/lol/{region}/v2.1/',
-				'2.2' => 'https://{region}.api.pvp.net/api/lol/{region}/v2.2/',
-				'2.3' => "https://{region}.api.pvp.net/api/lol/{region}/v2.3/",
-				'2.4' => "https://{region}.api.pvp.net/api/lol/{region}/v2.4/",
-				'2.5' => "https://{region}.api.pvp.net/api/lol/{region}/v2.5/"
-			],
-			$cache,
+	private $cache,
 			$region,
 			$key,
 			$responseCode,
-			$errorCodes = [
-				0   => 'NO_RESPONSE',
-				400 => 'BAD_REQUEST',
-				401 => 'UNAUTHORIZED',
-				403 => 'ACCESS_DENIED',
-				404 => 'NOT_FOUND',
-				429 => 'RATE_LIMIT_EXCEEDED',
-				500 => 'SERVER_ERROR',
-				503 => 'UNAVAILABLE'
-			];
+			$errorCodes;
 
-	public function __construct( $key, $decode = true, CacheInterface $cache = null)
+	public function __construct( $key, CacheInterface $cache = null)
 	{
 
 		$this->shortLimitQueue = new SplQueue();
 		$this->longLimitQueue = new SplQueue();
 
 		$this->key = $key;
-		$this->decode = $decode;
 		$this->cache = $cache;
+
+		$this->errorCodes = [
+			0   => 'NO_RESPONSE',
+			400 => 'BAD_REQUEST',
+			401 => 'UNAUTHORIZED',
+			403 => 'ACCESS_DENIED',
+			404 => 'NOT_FOUND',
+			429 => 'RATE_LIMIT_EXCEEDED',
+			500 => 'SERVER_ERROR',
+			503 => 'UNAVAILABLE'
+		];
 
 	}
 
@@ -48,50 +37,42 @@ class RiotApi {
 
 	public function getMatch( $id, $params = [] )
 	{
-		$call = $this->apiVersion['2.2']  . 'match/' . $id;
-		return $this->request( $call, $params );
+		return $this->request( 'v2.2', '/match/' . $id, $params );
 	}
 
 	public function getMatchHistory( $id, $params = [] )
 	{
-		return $this->request( $this->apiVersion['2.2']  . 'matchlist/by-summoner/' . $id, $params );
+		return $this->request( 'v2.2', '/matchlist/by-summoner/'. $id, $params );
 	}
 
 	public function getGame( $id )
 	{
-		return $this->request( $this->apiVersion['1.3'] . 'game/by-summoner/' . $id . '/recent' );
+		return $this->request( 'v1.3', '/game/by-summoner/'. $id .'/recent' );
 	}
 
 	public function getLeague( $id )
 	{
-		return $this->request( $this->apiVersion['2.5'] . 'league/by-summoner/' . $id ) ;
+		return $this->request( 'v2.5', '/league/by-summoner/'. $id ) ;
 	}
 
 	public function getStats( $id, $option = 'summary' )
 	{
-		return $this->request( $this->apiVersion['1.3'] . 'stats/by-summoner/' . $id . '/' . $option );
+		return $this->request( 'v1.3', '/stats/by-summoner/'. $id .'/'. $option );
 	}
 	
 	public function getSummonerId( $name )
 	{
-
-		$name = strtolower( $name );
+		$name = strtolower( str_replace( ' ', '', $name ) );
 		$summoner = $this->getSummonerByName( $name );
+		$summoner = json_decode( $summoner, true );
 
-		if ( $this->decode )
-		{
-			$summoner = json_decode( $summoner, true );
-			return $summoner[$name]['id'];
-		}
-		else
-			return $summoner[$name]['id'];
-
+		return $summoner[ $name ]['id'];
 	}		
 
 	public function getSummoner ( $id, $option = null ) 
 	{
 		
-		$call = 'summoner/' . $id;
+		$call = '/summoner/'. $id;
 		switch ($option) 
 		{
 			case 'masteries':
@@ -107,18 +88,18 @@ class RiotApi {
 				break;
 		}
 
-		return $this->request( $this->apiVersion['1.4'] . $call );
+		return $this->request( 'v1.4', $call );
 
 	}
 
 	public function getSummonerByName( $name )
 	{
-		return $this->request( $this->apiVersion['1.4'] . 'summoner/by-name/' . rawurlencode( $name ) );
+		return $this->request( 'v1.4', '/summoner/by-name/'. rawurlencode( $name ) );
 	}
 
 	public function getTeam( $id )
 	{
-		return $this->request( $this->apiVersion['2.3'] . 'team/by-summoner/' . $id );
+		return $this->request( 'v2.3', '/team/by-summoner/'. $id );
 	}
 
 	private function updateLimitQueue( $queue, $interval, $callLimit  ){
@@ -129,16 +110,13 @@ class RiotApi {
 			$timeSinceOldest = time() - $queue->bottom();
 
 			if( $timeSinceOldest > $interval )
-
+				
 				$queue->dequeue();
-			
+
 			elseif ($queue->count() >= $callLimit ) 
 			{
-				if ($timeSinceOldest < $interval) 
-				{
-					echo( "sleeping for".($interval - $timeSinceOldest + 1)." seconds\n" );
-					sleep($interval - $timeSinceOldest);
-				}
+				if ( $timeSinceOldest < $interval ) 
+					sleep( $interval - $timeSinceOldest );
 			}
 			else
 				break;
@@ -148,12 +126,11 @@ class RiotApi {
 
 	}
 
-	private function request( $call, $params = [] )
+	private function request( $version, $path, $params = [] )
 	{
 
 		$params['api_key'] = $this->key;
-
-		$url = str_replace( '{region}', $this->region, $call ) . '?' . http_build_query( $params );
+		$url = sprintf( 'https://%s.api.pvp.net/api/lol/%s/%s', $this->region, $this->region, $version ) . $path . '?' . http_build_query( $params );
 
 		if( $this->cache !== null && $this->cache->has( $url ) )
 			$result = $this->cache->get( $url );
@@ -161,6 +138,7 @@ class RiotApi {
 
 			$this->updateLimitQueue( $this->longLimitQueue, 600, 500 );
 			$this->updateLimitQueue( $this->shortLimitQueue, 10, 10 );
+
 
 			$ch = curl_init( $url );
 			curl_setopt( $ch, CURLOPT_RETURNTRANSFER, 1 );
