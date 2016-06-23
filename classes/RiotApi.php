@@ -124,12 +124,16 @@ class RiotApi {
 	private function request( $version, $path, $params = [] )
 	{
 
+		$fromCache = false;
 		$params['api_key'] = $this->key;
 
 		$url = sprintf( 'https://%s.api.pvp.net/api/lol/%s/%s', $this->region, $this->region, $version ) . $path . '?' . http_build_query( $params );
 
 		if( $this->cache !== null && $this->cache->has( $url ) )
+		{
+			$fromCache = true;
 			$result = $this->cache->get( $url );
+		}
 		else {
 
 			$this->updateLimitQueue( $this->longLimitQueue, 600, 500 );
@@ -152,7 +156,10 @@ class RiotApi {
 				return [ 'error' => $this->errorCodes[ $this->code ] ];
 		}
 
-		return json_decode( $result, true );
+		$result = json_decode( $result, true );
+		$fromCache && $result['fromCache'] = true;
+
+		return $result;
 
 	}
 
