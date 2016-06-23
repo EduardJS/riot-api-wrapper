@@ -48,9 +48,9 @@ class RiotApi {
 		return $this->request( 'v1.3', '/game/by-summoner/'. $id .'/recent' );
 	}
 
-	public function getLeague( $id )
+	public function getLeague( $id, $self = false )
 	{
-		return $this->request( 'v2.5', '/league/by-summoner/'. $id ) ;
+		return $this->request( 'v2.5', '/league/by-summoner/'. $id . ( $self ? '/entry' : '' ) )[ $id ][0];
 	}
 
 	public function getStats( $id, $option = 'summary' )
