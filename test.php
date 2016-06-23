@@ -8,8 +8,8 @@
 	});
 
 	$data = [
-		'summoner' 	=> 'yourSummonerName',
-		'server' 	  => 'eune' // https://developer.riotgames.com/api/methods for implementation availability
+		'summoner' => 'yourSummonerName',
+		'server'   => 'eune' // https://developer.riotgames.com/api/methods for implementation availability
 	];
 
 	$api = new RiotApi( 'YOUR-API-KEY' ); // `new FileSystemCache('cache/')` as second param for using the caching system
