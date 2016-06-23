@@ -3,21 +3,10 @@
 class RiotApi {
 
 	private $cache,
-			$region,
-			$key,
-			$responseCode,
-			$errorCodes;
-
-	public function __construct( $key, CacheInterface $cache = null)
-	{
-
-		$this->shortLimitQueue = new SplQueue();
-		$this->longLimitQueue = new SplQueue();
-
-		$this->key = $key;
-		$this->cache = $cache;
-
-		$this->errorCodes = [
+		$region,
+		$key,
+		$responseCode,
+		$errorCodes = [
 			0   => 'NO_RESPONSE',
 			400 => 'BAD_REQUEST',
 			401 => 'UNAUTHORIZED',
@@ -27,6 +16,15 @@ class RiotApi {
 			500 => 'SERVER_ERROR',
 			503 => 'UNAVAILABLE'
 		];
+
+	public function __construct( $key, CacheInterface $cache = null)
+	{
+
+		$this->shortLimitQueue = new SplQueue();
+		$this->longLimitQueue = new SplQueue();
+
+		$this->key = $key;
+		$this->cache = $cache;
 
 	}
 
@@ -63,10 +61,7 @@ class RiotApi {
 	public function getSummonerId( $name )
 	{
 		$name = strtolower( str_replace( ' ', '', $name ) );
-		$summoner = $this->getSummonerByName( $name );
-		$summoner = json_decode( $summoner, true );
-
-		return $summoner[ $name ]['id'];
+		return $this->getSummonerByName( $name )[ $name ]['id'];
 	}		
 
 	public function getSummoner ( $id, $option = null ) 
@@ -110,7 +105,7 @@ class RiotApi {
 			$timeSinceOldest = time() - $queue->bottom();
 
 			if( $timeSinceOldest > $interval )
-				
+
 				$queue->dequeue();
 
 			elseif ($queue->count() >= $callLimit ) 
@@ -130,6 +125,7 @@ class RiotApi {
 	{
 
 		$params['api_key'] = $this->key;
+
 		$url = sprintf( 'https://%s.api.pvp.net/api/lol/%s/%s', $this->region, $this->region, $version ) . $path . '?' . http_build_query( $params );
 
 		if( $this->cache !== null && $this->cache->has( $url ) )
@@ -138,7 +134,6 @@ class RiotApi {
 
 			$this->updateLimitQueue( $this->longLimitQueue, 600, 500 );
 			$this->updateLimitQueue( $this->shortLimitQueue, 10, 10 );
-
 
 			$ch = curl_init( $url );
 			curl_setopt( $ch, CURLOPT_RETURNTRANSFER, 1 );
@@ -154,12 +149,11 @@ class RiotApi {
 					$this->cache->put( $url, $result, 600 );
 				
 			} else
-				return [ 'error': $this->errorCodes[ $this->code ] ];
+				return [ 'error' => $this->errorCodes[ $this->code ] ];
 		}
 
-		$this->decode && $result = json_decode( $result, true );
+		return json_decode( $result, true );
 
-		return $result;
 	}
 
 }
