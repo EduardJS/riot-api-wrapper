@@ -121,6 +121,30 @@ class RiotApi {
 
 	}
 
+	/**
+	 * Fetch missing assets
+	 * $type [items, summoner_spells, champions]
+	 */
+	public static function assets( $type, $id )
+	{
+
+		$local 	= sprintf( '%s/%s/%d.png', ASSETS_PATH, $type, $id ); 
+
+		if ( file_exists( $local ) )
+			return readfile( $local );
+		else
+		{
+			$file = file_get_contents( sprintf( 'https://members.elo-boost.net/images/%s/%d.png' ) )
+
+			$handle = fopen( $local, 'w' );
+			fwrite( $handle, $file );
+			fclose( $handle );
+			
+			return $file;
+		}
+
+	}
+
 	private function request( $version, $path, $params = [] )
 	{
 
