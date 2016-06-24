@@ -129,17 +129,22 @@ class RiotApi {
 	{
 
 		$local 	= sprintf( '%s/%s/%d.png', ASSETS_PATH, $type, $id ); 
+		$remote = sprintf( 'https://members.elo-boost.net/images/%s/%d.png', $type, $id )
 
 		if ( file_exists( $local ) )
 			return readfile( $local );
 		else
 		{
-			$file = file_get_contents( sprintf( 'https://members.elo-boost.net/images/%s/%d.png' ) )
+
+			if ( !getimagesize( $remote ) )
+				return base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZgAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII=');
+
+			$file = file_get_contents( $remote );
 
 			$handle = fopen( $local, 'w' );
 			fwrite( $handle, $file );
 			fclose( $handle );
-			
+
 			return $file;
 		}
 
