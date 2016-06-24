@@ -129,7 +129,7 @@ class RiotApi {
 	{
 
 		$local 	= sprintf( '%s/%s/%d.png', ASSETS_PATH, $type, $id ); 
-		$remote = sprintf( 'https://members.elo-boost.net/images/%s/%d.png', $type, $id )
+		$remote = sprintf( 'https://members.elo-boost.net/images/%s/%d.png', $type, $id );
 
 		if ( file_exists( $local ) )
 			return readfile( $local );
