@@ -186,7 +186,6 @@ class RiotAPI {
 					$player['spell1Id'],
 					$player['spell2Id']
 				],
-				'lane' 		=> $match['lane'],
 				'timestamp' => round( $match['timestamp'] / 1000 ),
 				'won' 		=> $player['stats']['winner']
 			];
@@ -195,12 +194,13 @@ class RiotAPI {
 		return $matches;
 	}
 
-	private function request( $version, $path, $params = [] )
+	private function request( $version, $path, $params = [], $ignoreCache = false )
 	{
 
 		$params['api_key'] = $this->key;
 
 		$url = sprintf( 'https://%s.api.pvp.net/api/lol/%s/%s', $this->region, $this->region, $version ) . $path . '?' . http_build_query( $params );
+
 
 		$result = $this->cache->get( $url );
 
@@ -211,17 +211,17 @@ class RiotAPI {
 			{
 
 				// get new games
-				// $matches = $this->request( $version, $path, [ 
-				// 	'rankedQueues' 	=> 'TEAM_BUILDER_DRAFT_RANKED_5x5',
-				// 	'beginTime' 	=> $result['timestamp'] * 1000
-				// ]);
+				$matches = $this->request( $version, $path, [ 
+					'rankedQueues' 	=> 'TEAM_BUILDER_DRAFT_RANKED_5x5',
+					'beginTime' 	=> ( $result['timestamp'] - 1 ) * 1000
+				], true );
 
-				// // iterate games and put them in cache
-				// foreach( $matches as $match )
-				// 	array_unshift( $result['data'], $match );
+				// iterate games and put them in cache
+				foreach( $matches as $match )
+					array_unshift( $result['data'], $match );
 
-				// // cache new history
-				// $this->cache->put( $url, $result['data'], 0 );
+				// cache new history
+				$this->cache->put( $url, $result['data'], 0 );
 
 			}
 
@@ -245,10 +245,11 @@ class RiotAPI {
 				return [ 'error' => $result['status'] ];
 			else
 			{
-				if ( strpos( $path, 'matchlist' ) !== false )
-					$result = $this->prepareMatches( $result['matches'] );
 
-				strpos( $path, '/match/' ) === false && $this->cache->put( $url, $result, ( strpos( $path, 'matchlist' ) !== false ) ? 0 : 1800 );
+				if ( strpos( $path, 'matchlist' ) !== false )
+					$result = count( $result['matches'] ) ? $this->prepareMatches( $result['matches'] ) : [];
+
+				strpos( $path, '/match/' ) === false && !$ignoreCache && $this->cache->put( $url, $result, ( strpos( $path, 'matchlist' ) !== false ) ? 0 : 1800 );
 			}
 
 		}
