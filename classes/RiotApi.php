@@ -17,7 +17,7 @@ class RiotApi {
 			503 => 'UNAVAILABLE'
 		];
 
-	public function __construct( $key, CacheInterface $cache = null)
+	public function __construct( $key, $cache )
 	{
 
 		$this->shortLimitQueue = new SplQueue();
@@ -158,11 +158,8 @@ class RiotApi {
 
 		$url = sprintf( 'https://%s.api.pvp.net/api/lol/%s/%s', $this->region, $this->region, $version ) . $path . '?' . http_build_query( $params );
 
-		if( $this->cache !== null && $this->cache->has( $url ) )
-		{
-			$fromCache = true;
+		if( $this->cache->has( $url ) )
 			$result = $this->cache->get( $url );
-		}
 		else {
 
 			$this->updateLimitQueue( $this->longLimitQueue, 600, 500 );
@@ -185,10 +182,7 @@ class RiotApi {
 				return [ 'error' => $this->errorCodes[ $this->code ] ];
 		}
 
-		$result = json_decode( $result, true );
-		$fromCache && $result['fromCache'] = true;
-
-		return $result;
+		return json_decode( $result, true );
 
 	}
 
