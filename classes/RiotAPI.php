@@ -12,8 +12,9 @@ class RiotAPI {
 		$this->shortLimitQueue = new SplQueue();
 		$this->longLimitQueue = new SplQueue();
 
-		$this->key = $key;
-		$this->cache = $cache;
+		$this->ttl 		= 1200;
+		$this->key 		= $key;
+		$this->cache 	= $cache;
 
 	}
 
@@ -207,20 +208,23 @@ class RiotAPI {
 		if( $result['timestamp'] )
 		{
 
-			if ( strpos( $path, 'matchlist' ) !== false && $result['timestamp'] < time() - 1200 )
+			if ( strpos( $path, 'matchlist' ) !== false )
 			{
 
-				// get new games
-				$matches = $this->request( $version, $path, [ 
-					'rankedQueues' 	=> 'TEAM_BUILDER_DRAFT_RANKED_5x5',
-					'beginTime' 	=> ( $result['timestamp'] - 1 ) * 1000
-				], true );
+				if (  $result['timestamp'] < time() - $this->ttl )
+				{
+					// get new games
+					$matches = $this->request( $version, $path, [ 
+						'rankedQueues' 	=> 'TEAM_BUILDER_DRAFT_RANKED_5x5',
+						'beginTime' 	=> ( $result['timestamp'] - 1 ) * 1000
+					], true );
 
-				// iterate games and put them in cache
-				foreach( $matches as $match )
-					array_unshift( $result['data'], $match );
+					// iterate games and put them in cache
+					foreach( $matches as $match )
+						array_unshift( $result['data'], $match );
+				}
 
-				// cache new history
+				// re-cache (new) history
 				$this->cache->put( $url, $result['data'], 0 );
 
 			}
@@ -249,7 +253,7 @@ class RiotAPI {
 				if ( strpos( $path, 'matchlist' ) !== false )
 					$result = count( $result['matches'] ) ? $this->prepareMatches( $result['matches'] ) : [];
 
-				strpos( $path, '/match/' ) === false && !$ignoreCache && $this->cache->put( $url, $result, ( strpos( $path, 'matchlist' ) !== false ) ? 0 : 1800 );
+				strpos( $path, '/match/' ) === false && !$ignoreCache && $this->cache->put( $url, $result, ( strpos( $path, 'matchlist' ) !== false ) ? 0 : $this->ttl );
 			}
 
 		}
