@@ -1,6 +1,6 @@
 <?php
 
-class RiotApi {
+class RiotAPI {
 
 	private $cache,
 		$region,
@@ -38,49 +38,9 @@ class RiotApi {
 		return $this->request( 'v2.2', '/match/' . $id, $params );
 	}
 
-	public function getMatchHistory( $id, $params = [], $simplified = false )
+	public function getMatchHistory( $id, $params = [] )
 	{
-		$result = $this->request( 'v2.2', '/matchlist/by-summoner/'. $id, $params );
-
-		$matches = [];
-
-		foreach ( $result['matches'] as $match )
-		{
-			$game = $api->getMatch( $match['matchId'] );
-				
-			foreach ( $game['participants'] as $participant )
-				if ( $participant['championId'] == $match['champion'] )
-					$player = $participant;
-
-			$matches[] = [
-				'id' 		=> $match['matchId'],
-				'champion' 	=> $match['champion'],
-				'duration' 	=> $game['matchDuration'],
-				'items' 	=> [
-					$player['stats']['item0'], 
-					$player['stats']['item1'], 
-					$player['stats']['item2'],
-					$player['stats']['item3'],
-					$player['stats']['item4'],
-					$player['stats']['item5'],
-					$player['stats']['item6']
-				],
-				'kills' 	=> $player['stats']['kills'],
-				'deaths' 	=> $player['stats']['deaths'],
-				'assists' 	=> $player['stats']['assists'],
-				'farm' 		=> $player['stats']['minionsKilled'],
-				'spells' 	=> [ 
-					$player['spell1Id'],
-					$player['spell2Id']
-				],
-				'lane' 		=> $match['lane'],
-				'timestamp' => round( $match['timestamp'] / 1000 ),
-				'won' 		=> $player['stats']['winner']
-			];
-		}
-
-		return $matches
-
+		return $this->request( 'v2.2', '/matchlist/by-summoner/'. $id, $params );
 	}
 
 	public function getGame( $id )
@@ -146,7 +106,8 @@ class RiotApi {
 		return $this->request( 'v2.3', '/team/by-summoner/'. $id );
 	}
 
-	private function updateLimitQueue( $queue, $interval, $callLimit  ){
+	private function updateLimitQueue( $queue, $interval, $callLimit  )
+	{
 		
 		while( !$queue->isEmpty() )
 		{
@@ -206,28 +167,99 @@ class RiotApi {
 
 		$url = sprintf( 'https://%s.api.pvp.net/api/lol/%s/%s', $this->region, $this->region, $version ) . $path . '?' . http_build_query( $params );
 
-		if( $this->cache->has( $url ) )
-			$cached = $this->cache->get( $url );
+		$result = $this->cache->get( $url );
+
+		// echo $path;
+		// echo "\r\n";
+		// print_r( $result );
+		// echo "\r\n";
+
+		if( $result['timestamp'] )
+		{
 
 
+			// is request for matchlist
+			if ( strpos( $path, 'matchlist' ) !== false )
+			{
 
-		$this->updateLimitQueue( $this->longLimitQueue, 600, 500 );
-		$this->updateLimitQueue( $this->shortLimitQueue, 10, 10 );
+				$params['beginTime'] = $result['timestamp'] * 1000;				
+				// $this->request( $version, $path, $params );
 
-		$ch = curl_init( $url );
-		curl_setopt( $ch, CURLOPT_RETURNTRANSFER, 1 );
-		curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
-		curl_setopt( $ch, CURLOPT_SSL_VERIFYHOST, false );			
-		$result = curl_exec( $ch );
-		$this->code = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
-		curl_close( $ch );
+			}
 
-		if( $this->code == 200 ) {
-			$this->cache->put( $url, $result );
-		} else
-			return [ 'error' => $this->errorCodes[ $this->code ] ];
+			$result = $result['data'];
 
-		return json_decode( $result, true );
+		}
+		else
+		{
+
+			// limit 500 reqs every 10 minutes
+			$this->updateLimitQueue( $this->longLimitQueue, 600, 500 );
+			// limit 10 reqs every 10 seconds
+			$this->updateLimitQueue( $this->shortLimitQueue, 10, 10 );
+
+			// init request
+			$ch = curl_init( $url );
+			curl_setopt( $ch, CURLOPT_RETURNTRANSFER, 1 );
+			curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
+			curl_setopt( $ch, CURLOPT_SSL_VERIFYHOST, false );			
+			$result = json_decode( curl_exec( $ch ), true );
+			$this->code = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
+			curl_close( $ch );
+
+			if( $this->code == 200 )
+			{
+
+				if ( strpos( $path, 'matchlist' ) !== false )
+				{
+					$matches = [];
+
+					foreach ( $result['matches'] as $match )
+					{
+						$game = $this->getMatch( $match['matchId'] );
+							
+						foreach ( $game['participants'] as $participant )
+							if ( $participant['championId'] == $match['champion'] )
+								$player = $participant;
+
+						$matches[] = [
+							'id' 		=> $match['matchId'],
+							'champion' 	=> $match['champion'],
+							'duration' 	=> $game['matchDuration'],
+							'items' 	=> [
+								$player['stats']['item0'], 
+								$player['stats']['item1'], 
+								$player['stats']['item2'],
+								$player['stats']['item3'],
+								$player['stats']['item4'],
+								$player['stats']['item5'],
+								$player['stats']['item6']
+							],
+							'kills' 	=> $player['stats']['kills'],
+							'deaths' 	=> $player['stats']['deaths'],
+							'assists' 	=> $player['stats']['assists'],
+							'farm' 		=> $player['stats']['minionsKilled'],
+							'spells' 	=> [ 
+								$player['spell1Id'],
+								$player['spell2Id']
+							],
+							'lane' 		=> $match['lane'],
+							'timestamp' => round( $match['timestamp'] / 1000 ),
+							'won' 		=> $player['stats']['winner']
+						];
+					}
+
+					$result = $matches;
+				}
+
+				$this->cache->put( $url, $result, ( strpos( $path, 'matchlist' ) !== false ) ? 0 : 1800 );
+			}
+			else
+				return [ 'error' => $this->errorCodes[ $this->code ] ];
+
+		}
+
+		return $result;
 
 	}
 
