@@ -38,9 +38,49 @@ class RiotApi {
 		return $this->request( 'v2.2', '/match/' . $id, $params );
 	}
 
-	public function getMatchHistory( $id, $params = [] )
+	public function getMatchHistory( $id, $params = [], $simplified = false )
 	{
-		return $this->request( 'v2.2', '/matchlist/by-summoner/'. $id, $params );
+		$result = $this->request( 'v2.2', '/matchlist/by-summoner/'. $id, $params );
+
+		$matches = [];
+
+		foreach ( $result['matches'] as $match )
+		{
+			$game = $api->getMatch( $match['matchId'] );
+				
+			foreach ( $game['participants'] as $participant )
+				if ( $participant['championId'] == $match['champion'] )
+					$player = $participant;
+
+			$matches[] = [
+				'id' 		=> $match['matchId'],
+				'champion' 	=> $match['champion'],
+				'duration' 	=> $game['matchDuration'],
+				'items' 	=> [
+					$player['stats']['item0'], 
+					$player['stats']['item1'], 
+					$player['stats']['item2'],
+					$player['stats']['item3'],
+					$player['stats']['item4'],
+					$player['stats']['item5'],
+					$player['stats']['item6']
+				],
+				'kills' 	=> $player['stats']['kills'],
+				'deaths' 	=> $player['stats']['deaths'],
+				'assists' 	=> $player['stats']['assists'],
+				'farm' 		=> $player['stats']['minionsKilled'],
+				'spells' 	=> [ 
+					$player['spell1Id'],
+					$player['spell2Id']
+				],
+				'lane' 		=> $match['lane'],
+				'timestamp' => round( $match['timestamp'] / 1000 ),
+				'won' 		=> $player['stats']['winner']
+			];
+		}
+
+		return $matches
+
 	}
 
 	public function getGame( $id )
@@ -50,7 +90,16 @@ class RiotApi {
 
 	public function getLeague( $id, $self = false )
 	{
-		return $this->request( 'v2.5', '/league/by-summoner/'. $id . ( $self ? '/entry' : '' ) )[ $id ][0];
+		$result = $this->request( 'v2.5', '/league/by-summoner/'. $id . ( $self ? '/entry' : '' ) )[ $id ][0];
+
+		if ( $self )
+			$result = [
+				'tier' 		=> $result['tier'],
+				'division' 	=> $result['entries'][0]['division'],
+				'points' 	=> $result['entries'][0]['leaguePoints']
+			];
+
+		return $result;
 	}
 
 	public function getStats( $id, $option = 'summary' )
@@ -153,34 +202,30 @@ class RiotApi {
 	private function request( $version, $path, $params = [] )
 	{
 
-		$fromCache = false;
 		$params['api_key'] = $this->key;
 
 		$url = sprintf( 'https://%s.api.pvp.net/api/lol/%s/%s', $this->region, $this->region, $version ) . $path . '?' . http_build_query( $params );
 
 		if( $this->cache->has( $url ) )
-			$result = $this->cache->get( $url );
-		else {
+			$cached = $this->cache->get( $url );
 
-			$this->updateLimitQueue( $this->longLimitQueue, 600, 500 );
-			$this->updateLimitQueue( $this->shortLimitQueue, 10, 10 );
 
-			$ch = curl_init( $url );
-			curl_setopt( $ch, CURLOPT_RETURNTRANSFER, 1 );
-			curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
-			curl_setopt( $ch, CURLOPT_SSL_VERIFYHOST, false );			
-			$result = curl_exec( $ch );
-			$this->code = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
-			curl_close( $ch );
 
-			if( $this->code == 200 ) {
+		$this->updateLimitQueue( $this->longLimitQueue, 600, 500 );
+		$this->updateLimitQueue( $this->shortLimitQueue, 10, 10 );
 
-				if( $this->cache !== null )
-					$this->cache->put( $url, $result, 600 );
-				
-			} else
-				return [ 'error' => $this->errorCodes[ $this->code ] ];
-		}
+		$ch = curl_init( $url );
+		curl_setopt( $ch, CURLOPT_RETURNTRANSFER, 1 );
+		curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
+		curl_setopt( $ch, CURLOPT_SSL_VERIFYHOST, false );			
+		$result = curl_exec( $ch );
+		$this->code = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
+		curl_close( $ch );
+
+		if( $this->code == 200 ) {
+			$this->cache->put( $url, $result );
+		} else
+			return [ 'error' => $this->errorCodes[ $this->code ] ];
 
 		return json_decode( $result, true );
 
