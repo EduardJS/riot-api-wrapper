@@ -19,20 +19,13 @@
 	// get summoner id
 	$summonerId = $api->getSummonerId( $data['summoner'] );
 
-	
 	// get current tier
 	$league = $api->getLeague( $summonerId, true );
-	$league = [
-		'tier' 		=> $league['tier'],
-		'division' 	=> $league['entries'][0]['division'],
-		'points' 	=> $league['entries'][0]['leaguePoints']
-	];
-	
 
 	// get match history
-	$history = $api->getMatchHistory( $summonerId, [ 
+	$matches = $api->getMatchHistory( $summonerId, [ 
 		'rankedQueues' 	=> 'TEAM_BUILDER_DRAFT_RANKED_5x5',
-		'beginTime' 	=> ( time() - ( 86400 * 7 ) ) * 1000, // last 7 days
+		'beginTime' 	=> 1464782400000,
 		'beginIndex' 	=> 0,
-		'endIndex' 	=> 10 // last 10 games
-	]);
+		'endIndex' 		=> 10
+	], true );
