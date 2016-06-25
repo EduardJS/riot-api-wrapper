@@ -32,7 +32,7 @@ class FSCache {
 
 	public function put( $key, $data, $ttl )
 	{
-		file_put_contents( $this->getPath( $key ), json_encode( [ 'timestamp' => time(), 'ttl' => $ttl, 'data' => $data ] ) );
+		file_put_contents( $this->getPath( $key ), json_encode( [ 'path' => $key, 'timestamp' => time(), 'ttl' => $ttl, 'data' => $data ] ) );
 	}
 
 	private function getPath( $key )
