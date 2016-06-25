@@ -1,4 +1,5 @@
 <?php
+
 class FSCache {
 
 	private $dir;
@@ -18,17 +19,12 @@ class FSCache {
 
 	public function get( $key )
 	{
-		return $this->load( $key );
+		return json_decode( file_get_contents( $this->getPath( $key ) ) );
 	}
 
 	public function put( $key, $data )
 	{
-		file_put_contents( $this->getPath( $key ), json_encode( $data ) );
-	}
-
-	private function load( $key )
-	{
-		return json_decode( file_get_contents( $this->getPath( $key ) ) );
+		file_put_contents( $this->getPath( $key ), json_encode( [ 'timestamp' => time(), 'data' => $data ] ) );
 	}
 
 	private function getPath( $key )
