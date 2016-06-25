@@ -1,7 +1,5 @@
 <?php
-require_once('CacheInterface.php');
-
-class FileSystemCache implements CacheInterface {
+class FileSystemCache {
 
 	/**
 	 * @var string
