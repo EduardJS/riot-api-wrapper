@@ -207,7 +207,7 @@ class RiotAPI {
 		if( $result['timestamp'] )
 		{
 
-			if ( strpos( $path, 'matchlist' ) !== false )
+			if ( strpos( $path, 'matchlist' ) !== false && $result['timestamp'] < time() - 600 )
 			{
 
 				// get new games
