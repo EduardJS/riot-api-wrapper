@@ -12,19 +12,27 @@ class FSCache {
 			mkdir( $this->dir, 0777, true );
 	}
 
-	public function has( $key )
-	{
-		return file_exists( $this->getPath( $key ) );
-	}
-
 	public function get( $key )
 	{
-		return json_decode( file_get_contents( $this->getPath( $key ) ) );
+
+		if ( !file_exists( $this->getPath( $key ) ) )
+			return [];
+
+		$entry = json_decode( file_get_contents( $this->getPath( $key ) ), true );
+		
+		if ( $entry === null ) 
+			return [];
+
+		if ( $entry['ttl'] != 0 && time() >= ( $entry['timestamp'] + $entry['ttl'] )  )
+			return [];
+
+		return $entry;
+
 	}
 
-	public function put( $key, $data )
+	public function put( $key, $data, $ttl )
 	{
-		file_put_contents( $this->getPath( $key ), json_encode( [ 'timestamp' => time(), 'data' => $data ] ) );
+		file_put_contents( $this->getPath( $key ), json_encode( [ 'timestamp' => time(), 'ttl' => $ttl, 'data' => $data ] ) );
 	}
 
 	private function getPath( $key )
