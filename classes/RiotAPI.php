@@ -151,7 +151,7 @@ class RiotAPI {
 
 	}
 
-	public function getProgress( $fromLeague, $fromDivision, $fromPoints, $currLeague, $currDivision, $currPoints, $toLeague, $toDivision )
+	public function getProgress( $fromLeague, $fromDivision, $currLeague, $currDivision, $currPoints, $toLeague, $toDivision )
 	{
 
 		$fromLeague 	= strtoupper( $fromLeague );
@@ -164,11 +164,11 @@ class RiotAPI {
 		$tiers 			= [ 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'MASTER', 'CHALLENGER' ];
 		$divisions 		= [ 'I' => 4, 'II' => 3, 'III' => 2, 'IV' => 1, 'V' => 0 ];
 
-		$start 	= array_search( $fromLeague, $tiers ) * 500 + $divisions[ $fromDivision ] * 100 + $fromPoints;
+		$start 	= array_search( $fromLeague, $tiers ) * 500 + $divisions[ $fromDivision ] * 100;
 		$curr 	= array_search( $currLeague, $tiers ) * 500 + $divisions[ $currDivision ] * 100 + $currPoints - $start;
 		$final 	= array_search( $toLeague, $tiers ) * 500 + $divisions[ $toDivision ] * 100 - $start;
 
-		return min( 100, floor( ( $curr / $final ) * 100 ) );
+		return min( 100, max( 0, floor( ( $curr / $final ) * 100 ) ) );
 
 	}
 
