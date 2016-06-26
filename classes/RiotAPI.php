@@ -38,19 +38,24 @@ class RiotAPI {
 		return $this->request( 'v1.3', '/game/by-summoner/'. $id .'/recent' );
 	}
 
-	public function getLeague( $id, $self = false )
+	public function getLeague( $id )
 	{
-		$result = $this->request( 'v2.5', '/league/by-summoner/'. $id . ( $self ? '/entry' : '' ) )[ $id ][0];
+		$result = $this->request( 'v2.5', '/league/by-summoner/'. $id . '/entry' );
 
-		if ( $self )
-			$result = [
-				'tier' 		=> $result['tier'],
-				'division' 	=> $result['entries'][0]['division'],
-				'points' 	=> $result['entries'][0]['leaguePoints'],
-				'series' 	=> $result['entries'][0]['miniSeries']
+		if ( $result['error'] )
+			return [
+				'tier' => 'UNRANKED',
+				'division' => 'I'
 			];
 
-		return $result;
+		$result = $result[ $id ][0];
+
+		return [
+			'tier' 		=> $result['tier'],
+			'division' 	=> $result['entries'][0]['division'],
+			'points' 	=> $result['entries'][0]['leaguePoints'],
+			'series' 	=> $result['entries'][0]['miniSeries']
+		];
 	}
 
 	public function getStats( $id, $option = 'summary' )
@@ -223,7 +228,6 @@ class RiotAPI {
 		$params['api_key'] = $this->key;
 
 		$url = sprintf( 'https://%s.api.pvp.net/api/lol/%s/%s', $this->region, $this->region, $version ) . $path . '?' . http_build_query( $params );
-
 
 		$result = $this->cache->get( $url );
 
