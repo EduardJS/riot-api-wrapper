@@ -46,7 +46,8 @@ class RiotAPI {
 			$result = [
 				'tier' 		=> $result['tier'],
 				'division' 	=> $result['entries'][0]['division'],
-				'points' 	=> $result['entries'][0]['leaguePoints']
+				'points' 	=> $result['entries'][0]['leaguePoints'],
+				'series' 	=> $result['entries'][0]['miniSeries']
 			];
 
 		return $result;
@@ -167,7 +168,7 @@ class RiotAPI {
 		$curr 	= array_search( $currLeague, $tiers ) * 500 + $divisions[ $currDivision ] * 100 + $currPoints - $start;
 		$final 	= array_search( $toLeague, $tiers ) * 500 + $divisions[ $toDivision ] * 100 - $start;
 
-		return min( 95, floor( ( $curr / $final ) * 100 ) );
+		return min( 100, floor( ( $curr / $final ) * 100 ) );
 
 	}
 
